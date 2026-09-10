@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雅德小学四年级华文口试智能评分与反馈系统</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 React 和 ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- 引入 Babel 用于浏览器内编译 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        @media print {
+            body { background-color: white; font-size: 14pt; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            .print-container {
+                border: 2px solid #3b82f6;
+                border-radius: 16px;
+                padding: 40px;
+                margin: 20px;
+                box-shadow: none;
+            }
+        }
+        .print-only { display: none; }
+        
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f0fdf4;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #86efac;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4ade80;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans min-h-screen pb-24 text-base">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        const rubricsData = {
+            readingPron: {
+                title: "语音和清晰度",
+                max: 5,
+                items: [
+                    { level: 1, score: 5, label: "上 (5分)", desc: "语音准确，咬字清晰；发音自然、响亮。", feedback: "你的发音非常准确，咬字字正腔圆，声音自然又响亮！" },
+                    { level: 2, score: 4, label: "中上 (4分)", desc: "语音相当准确，只有少许错误；咬字较清晰。", feedback: "你的发音相当准确、清晰，只有极少数字音需要注意哦。" },
+                    { level: 3, score: 3, label: "中 (3分)", desc: "语音基本准确，但有较多错误；咬字基本清楚。", feedback: "发音基本清楚，但有一些错字。遇到不认识的字可以根据字形或上下文猜一猜。" },
+                    { level: 4, score: 2, label: "中下 (2分)", desc: "语音错误较多；咬字不够清楚。", feedback: "发音错误较多，部分字音不够清晰，平时要多大声朗读练习。" },
+                    { level: 5, score: 1, label: "下 (1分)", desc: "大部分字词读错；发音不清楚。", feedback: "这次朗读遇到不少困难，别灰心，跟着老师多读多听，一定会进步的！" }
+                ]
+            },
+            readingFluency: {
+                title: "语速、语调和流利度",
+                max: 5,
+                items: [
+                    { level: 1, score: 5, label: "上 (5分)", desc: "朗读流利；语速适中，停顿自然；语调正确，富有节奏感。", feedback: "朗读非常流利，停顿自然，语调有起伏，听起来很有节奏感！" },
+                    { level: 2, score: 4, label: "中上 (4分)", desc: "朗读较流利；语速较适中，停顿较自然；语调基本正确。", feedback: "朗读相当流畅，语速合适，语调也很自然。" },
+                    { level: 3, score: 3, label: "中 (3分)", desc: "朗读基本流利，但偶尔停顿；语速基本适中；语调变化较少。", feedback: "朗读基本顺畅，虽然偶尔有停顿，但整体表现不错。" },
+                    { level: 4, score: 2, label: "中下 (2分)", desc: "朗读欠流利；停顿较多；语速忽快忽慢。", feedback: "朗读停顿比较多，下次试着看完整句话再读出来，会更流畅。" },
+                    { level: 5, score: 1, label: "下 (1分)", desc: "朗读困难，经常停顿；语速和语调不恰当。", feedback: "朗读有些断断续续，建议先从简短的句子开始练习朗读。" }
+                ]
+            },
+            pictureContent: {
+                title: "内容的完整性和条理性",
+                max: 5,
+                items: [
+                    { level: 1, score: 5, label: "上 (5分)", desc: "无需引导，能够完整、有条理地描述内容，并充分阐述个人的看法及感受。", feedback: "看图说话观察非常仔细！无需引导就能完整有条理地描述内容，还能充分阐述个人的看法及感受。" },
+                    { level: 2, score: 4, label: "中上 (4分)", desc: "偶尔需要引导，能够较完整、有条理地描述内容，并能适当阐述个人的看法和感受。", feedback: "表达很不错，能够较完整有条理地描述内容，并能适当阐述自己的看法和感受。" },
+                    { level: 3, score: 3, label: "中 (3分)", desc: "经常需要引导，能够描述主要内容，并能简单阐述部分看法和感受。", feedback: "能够描述图画的主要内容，并简单表达部分看法和感受，如果能补充更多细节就更好了。" },
+                    { level: 4, score: 2, label: "中下 (2分)", desc: "需要不断引导，只能作简单的描述，未能进一步阐述个人的看法和感受。", feedback: "在引导下能作简单描述，但还未能进一步阐述个人的看法和感受，平时要多观察细节大声表达。" },
+                    { level: 5, score: 1, label: "下 (1分)", desc: "即使给予引导，仍几乎无法描述内容，也未能表达个人的看法和感受。", feedback: "看图说话遇到了困难，别灰心，建议平时多看图多练习先从简单的人物和动作说起。" }
+                ]
+            },
+            pictureLanguage: {
+                title: "看图表达和流利度",
+                max: 5,
+                items: [
+                    { level: 1, score: 5, label: "上 (5分)", desc: "使用丰富、恰当的词语和句式；表达清楚、自然、流利。", feedback: "使用了非常丰富且恰当的好词好句，表达流利自然，非常棒！" },
+                    { level: 2, score: 4, label: "中上 (4分)", desc: "大部分时间使用恰当的词语和句式；表达较清楚，较流利。", feedback: "词汇量丰富，大部分时间表达都很清晰流利。" },
+                    { level: 3, score: 3, label: "中 (3分)", desc: "使用基本词语和简单句式；表达基本清楚，偶尔停顿。", feedback: "能用基本的词句完整表达意思，平时可以多积累词语，让表达更丰富。" },
+                    { level: 4, score: 2, label: "中下 (2分)", desc: "词语和句式较单一；表达欠清楚，停顿较多。", feedback: "用词比较单一，表达有些停顿，平时多大声说汉语会更有信心。" },
+                    { level: 5, score: 1, label: "下 (1分)", desc: "词语十分有限；表达困难，不流利，经常停顿。", feedback: "词汇量有限，表达较吃力。别灰心，多听多看多跟着练习。" }
+                ]
+            },
+            convResponse: {
+                title: "回应内容和交流能力",
+                max: 5,
+                items: [
+                    { level: 1, score: 5, label: "上 (5分)", desc: "只需少量引导；能准确理解问题，并作出完整回应；能结合经历或想法进一步说明；能自然参与交流。", feedback: "会话时非常自信！理解力强，能结合个人经历拓展回答，交流非常自然！" },
+                    { level: 2, score: 4, label: "中上 (4分)", desc: "偶尔需要引导；能回应问题，并适当补充自己的想法；大部分时间能持续交流。", feedback: "会话表现出色，只需老师稍微提示就能流畅补充自己的想法。" },
+                    { level: 3, score: 3, label: "中 (3分)", desc: "经常需要引导；能回答问题，但内容较简单；偶尔能补充自己的意见。", feedback: "在老师引导下能回答问题，下次试着主动多说一些自己的想法和感受。" },
+                    { level: 4, score: 2, label: "中下 (2分)", desc: "需要不断引导；只能作简单回应；难以持续交流。", feedback: "回答问题时需要老师不断提醒，希望你以后多观察生活，大声表达想法。" },
+                    { level: 5, score: 1, label: "下 (1分)", desc: "即使给予引导，也难以回应；无法参与交流。", feedback: "会话时比较紧张，难以回应。没关系，我们从日常简单的问答慢慢练起。" }
+                ]
+            },
+            convLanguage: {
+                title: "会话表达和流利度",
+                max: 5,
+                items: [
+                    { level: 1, score: 5, label: "上 (5分)", desc: "使用丰富、恰当的词语和句式；表达自然、清楚、流利。", feedback: "会话用词丰富、句式漂亮，说得清楚又流畅！" },
+                    { level: 2, score: 4, label: "中上 (4分)", desc: "使用较恰当的词语和句式；表达较清楚，较流利。", feedback: "会话表达比较流畅，词汇使用也很恰当。" },
+                    { level: 3, score: 3, label: "中 (3分)", desc: "使用基本词语和简单句式；表达基本清楚，偶尔停顿。", feedback: "能用简单的句子回答问题，表达基本清楚。" },
+                    { level: 4, score: 2, label: "中下 (2分)", desc: "词语和句式较单一；表达欠清楚，不够流利。", feedback: "说话时有些犹豫，用词较简单，多说多练就会有进步。" },
+                    { level: 5, score: 1, label: "下 (1分)", desc: "词语十分有限；表达困难，经常停顿，难以完成交流。", feedback: "表达有些吃力，积累词汇是关键，加油！" }
+                ]
+            }
+        };
+
+        const examinersList = [
+            'Chen Jingjing', 'Chia Ai Tian', 'Chong Shi Yan', 'Dong Jingjing', 
+            'Foo Siew Yee', 'Hao Xiaoxing', 'Huang Yao Tian', 'Hu Yulan', 
+            'Lim Lee Choon', 'Lin Yushi', 'Peng Yuanzhen', 'Poh Yeu Pei', 
+            'Su Wan Ju', 'Tan Hui Juai', 'Tey Siew Leng', 'Yeo Wee Kiang', 'Zheng Lidan'
+        ];
+
+        const defaultRoster = [
+            // 4CL1
+            { formClass: 'P4-E', mtClass: '4CL1', name: 'CHEONG KE YANG' },
+            { formClass: 'P4-E', mtClass: '4CL1', name: 'JAYLEN CHNG JUN XIONG' },
+            { formClass: 'P4-E', mtClass: '4CL1', name: 'LEE HAO RUI RAYDER' },
+            { formClass: 'P4-E', mtClass: '4CL1', name: 'ONG JUN KAI, JAYEN' },
+            { formClass: 'P4-E', mtClass: '4CL1', name: 'SOH YU FAN, BRAYDEN' },
+            { formClass: 'P4-E', mtClass: '4CL1', name: 'TREATIC HO' },
+            { formClass: 'P4-H', mtClass: '4CL1', name: 'CHIAM HAN XIANG LUCAS' },
+            { formClass: 'P4-H', mtClass: '4CL1', name: 'CHUA SIANG U ZACHARY' },
+            { formClass: 'P4-H', mtClass: '4CL1', name: 'DEBBIE ANG YU MAN' },
+            { formClass: 'P4-H', mtClass: '4CL1', name: 'GABRIEL TAN' },
+            { formClass: 'P4-H', mtClass: '4CL1', name: 'JAYDEN ONG YOU WEN' },
+            { formClass: 'P4-H', mtClass: '4CL1', name: 'KELLY CHANG KAI LI' },
+            { formClass: 'P4-H', mtClass: '4CL1', name: 'LAU KA HUNG' },
+            { formClass: 'P4-I', mtClass: '4CL1', name: 'DARSHAN RAJAN NARWANI' },
+            { formClass: 'P4-RS', mtClass: '4CL1', name: 'ELYSSA CHOE SHI EN' },
+            { formClass: 'P4-RS', mtClass: '4CL1', name: 'TAN BO HAN, HAROLD' },
+            { formClass: 'P4-RS', mtClass: '4CL1', name: 'VENETIA WONG JING QI' },
+            { formClass: 'P4-RS', mtClass: '4CL1', name: 'WEE YIN REN MARC' },
+            { formClass: 'P4-RS', mtClass: '4CL1', name: 'WOO JIA JUN COBY' },
+
+            // 4CL2
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'CATHERINE MARIE HARYANTO' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'CHEONG MING FENG AUGUSTINE' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'CHLOE LIM JIAYI' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'DAYNA HENG ZI YAN' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'KIARA MABELLE SUHARDJO' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'KIM RA ON' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'KIU CHEN LING KAYLA' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'LIM JUN HUI' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'LIN HSIAN YEE LOIS' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'LOUIS JIA-LE CROGUENNEC' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'OLIVIA TEO' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'ONG REI XIANG' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'RAPHAEL PANG TIAN LE' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'REHAN ANTONIN DVORAK-GHOSH' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'SIM YU QI' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'TAI QI YING, AVELYN' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'TOO JIA WEN JESLYN' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'WOO HEI MAN RENEE' },
+            { formClass: 'P4-E', mtClass: '4CL2', name: 'YANG ZIXUAN' },
+            { formClass: 'P4-H', mtClass: '4CL2', name: 'HAN QIAOXIN ELIZA' },
+            { formClass: 'P4-H', mtClass: '4CL2', name: 'KOH TIANJUN HUGO' },
+            { formClass: 'P4-H', mtClass: '4CL2', name: 'NATASHA GAN ZI QI' },
+            { formClass: 'P4-H', mtClass: '4CL2', name: 'SOH E XIN KRISTAN' },
+            { formClass: 'P4-H', mtClass: '4CL2', name: 'TAI XUAN YING, ALINA' },
+            { formClass: 'P4-I', mtClass: '4CL2', name: 'CHAN WAN-ENG AMABELLE' },
+            { formClass: 'P4-I', mtClass: '4CL2', name: 'HUANG JINGXI' },
+            { formClass: 'P4-I', mtClass: '4CL2', name: 'KOONG JIE LE CONOR' },
+            { formClass: 'P4-I', mtClass: '4CL2', name: 'LEONG YIN KWAN' },
+            { formClass: 'P4-I', mtClass: '4CL2', name: 'LIM JINGJIE' },
+            { formClass: 'P4-I', mtClass: '4CL2', name: 'LIM KAI EN ASHER' },
+            { formClass: 'P4-I', mtClass: '4CL2', name: 'LOH SHI NING, CHLOE' },
+            { formClass: 'P4-I', mtClass: '4CL2', name: 'OH YU CHEN, TAVIS' },
+            { formClass: 'P4-I', mtClass: '4CL2', name: 'EUEN TOH KIT CHUNG (DU JIECONG)' },
+
+            // 4CL3
+            { formClass: 'P4-E', mtClass: '4CL3', name: 'INES YING HUI JOHNSON' },
+            { formClass: 'P4-E', mtClass: '4CL3', name: 'LEE JIA YI' },
+            { formClass: 'P4-E', mtClass: '4CL3', name: 'LIM LI YA' },
+            { formClass: 'P4-E', mtClass: '4CL3', name: 'MATTHIAS TAN JING RUI' },
+            { formClass: 'P4-E', mtClass: '4CL3', name: 'SUN CHENGYANG' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'AILSIE CHIN EN QI' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'ALEC AI SHUFAN' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'ANG YI XUAN AYLIN' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'ANNAMARIA LIN XIYA' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'CHEN SIYU' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'CHOH ZI YANG RYAN' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'EMMA TEW YING QING' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'JAYDEN LEE ZHI HONG' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'JESSE ZHANG JUNHAN' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'KAYLENE SOO LING JIN' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'KIEW DIAN ZHENG, ASHER' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'KOH KAI JUN RAYLEIGH' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'LEIA MIKAELA LOKE' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'LIM SI MIN CADENCE' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'NAOMI LIM XIN XI' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'NATHAN LIM ZI AN' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'NG JUN CHANG GARRETT' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'NG ROU EN, ERICIA' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'OLIVIA XINYU WADE' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'REEYA PRABHURAM' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'TAN HONG RUI' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'WONG ZI XUAN' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'YONG ETHAN' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'ZELENE HO' },
+            { formClass: 'P4-O', mtClass: '4CL3', name: 'ZHUANG MOYE' },
+            { formClass: 'P4-RS', mtClass: '4CL3', name: 'CHAN WAI SHUEN' },
+            { formClass: 'P4-RS', mtClass: '4CL3', name: 'CHUA MING JOON, OWEN' },
+            { formClass: 'P4-RS', mtClass: '4CL3', name: 'CODY SIM JUNPENG' },
+            { formClass: 'P4-RS', mtClass: '4CL3', name: 'LIM JING YING' },
+            { formClass: 'P4-RS', mtClass: '4CL3', name: 'LUTHER GOH ZHENG XUAN' },
+            { formClass: 'P4-RS', mtClass: '4CL3', name: 'TAN SZE LING SCARLETT' },
+            { formClass: 'P4-RS', mtClass: '4CL3', name: 'YU MING FENG EVAN' },
+            { formClass: 'P4-E', mtClass: '4CL3', name: 'YI ZHILIN' },
+            { formClass: 'P4-RS', mtClass: '4CL3', name: 'HUANG CHENGXI' },
+
+            // 4CL4
+            { formClass: 'P4-H', mtClass: '4CL4', name: 'ANG XUAN KID' },
+            { formClass: 'P4-H', mtClass: '4CL4', name: 'ISABELLE POON XUE ER' },
+            { formClass: 'P4-H', mtClass: '4CL4', name: 'KARA BETH LAI' },
+            { formClass: 'P4-I', mtClass: '4CL4', name: 'WANG YOUYI' },
+            { formClass: 'P4-O', mtClass: '4CL4', name: 'CHANG HAO YU, GASPAR' },
+            { formClass: 'P4-O', mtClass: '4CL4', name: 'CHARLES YE YANRAN' },
+            { formClass: 'P4-O', mtClass: '4CL4', name: 'DARIUS CHUA KAI FENG' },
+            { formClass: 'P4-O', mtClass: '4CL4', name: 'DEON SANTOSO' },
+            { formClass: 'P4-O', mtClass: '4CL4', name: 'ELYSSA THEA LUHUR' },
+            { formClass: 'P4-O', mtClass: '4CL4', name: 'IAN LIM JUN XIAN' },
+            { formClass: 'P4-O', mtClass: '4CL4', name: 'JANELLE CHAN' },
+            { formClass: 'P4-O', mtClass: '4CL4', name: 'JEREMIAH TAN KAI LE' },
+            { formClass: 'P4-O', mtClass: '4CL4', name: 'KAI LINDEMANN' },
+            { formClass: 'P4-O', mtClass: '4CL4', name: 'KOH EN YI ALEXA' },
+            { formClass: 'P4-O', mtClass: '4CL4', name: 'LEONG KAI HONG, ETHAN' },
+            { formClass: 'P4-O', mtClass: '4CL4', name: 'MEGAN LIM JING XUAN' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'ADEN TAN KAI ZE' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'CHIA XIN TONG JASLYN' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'HOW ELIN' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'JOHANN TANG YI XIAN' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'JUNIUS-JAY LOH YI RUI' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'LIM JIA LE, SHAUN' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'LIM ZI QIN' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'RAE LYNN KHOO' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'SOFIA WEASLEY' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'SU SHIYA' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'TAN JIA XUAN' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'TAN LE XUAN, ALYSSA' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'THAM JIE YI, KYAN' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'WONG QI YANG' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'WONG SHI HAN, CHLOE' },
+            { formClass: 'P4-RS', mtClass: '4CL4', name: 'YEO ZONG XUN' },
+
+            // 4CL5
+            { formClass: 'P4-H', mtClass: '4CL5', name: 'ANG JUN RONG' },
+            { formClass: 'P4-H', mtClass: '4CL5', name: 'ANNA LEE SI EN' },
+            { formClass: 'P4-H', mtClass: '4CL5', name: 'HO ZUNG HOI, THADDEUS' },
+            { formClass: 'P4-H', mtClass: '4CL5', name: 'LEE XIN TING CELINE' },
+            { formClass: 'P4-H', mtClass: '4CL5', name: 'LEW SHAN MIN' },
+            { formClass: 'P4-H', mtClass: '4CL5', name: 'NAOMI KAN WEI EN' },
+            { formClass: 'P4-H', mtClass: '4CL5', name: 'NEO HWEE ZEN' },
+            { formClass: 'P4-H', mtClass: '4CL5', name: 'OLIVER LOH HONG KAI' },
+            { formClass: 'P4-H', mtClass: '4CL5', name: 'SZE YI HAN' },
+            { formClass: 'P4-H', mtClass: '4CL5', name: 'TING YU AN CAEDMON' },
+            { formClass: 'P4-H', mtClass: '4CL5', name: 'YUE KAIQI' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'ALEX CHUA YI FENG' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'ARIELLA ARIFIN' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'CHIU JING YU KODY' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'CHUA JIA YING OLIVIA' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'ENYEA TEO EN RUI' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'HONG ZI XUAN, ELLIE' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'KWAN YU EN EMMA' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'LAU JIE KAI' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'LEE HOU MING' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'LEIA TAM TZE MIN' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'LOW YI LE ETHAN' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'NG JIN RUI DARIUS' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'OW KAI XUAN, ANDREA' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'PHANG ZI RUI' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'SEE YI LING' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'TAN JIA HUAN LYDIA' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'TAN YU XI MATILDA' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'TER JOO EE' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'TONG PEI YI CLARE' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'WONG MIN EN, MIKAYLA' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'YEO YU KAI ALDRICH' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'YEW YU HAN CHARLOTTE' },
+            { formClass: 'P4-I', mtClass: '4CL5', name: 'CHEN XINRAN' },
+            { formClass: 'P4-H', mtClass: '4CL5', name: 'HUANG YIYANG' },
+            { formClass: 'P4-H', mtClass: '4CL5', name: 'SU RUINING' },
+
+            // 4CL6
+            { formClass: 'P4-E', mtClass: '4CL6', name: 'ALOYSIUS ONG KAI SHENG' },
+            { formClass: 'P4-E', mtClass: '4CL6', name: 'NICOLAS LIM YUAN HE' },
+            { formClass: 'P4-H', mtClass: '4CL6', name: 'SIENNA WEE SHI EN' },
+            { formClass: 'P4-I', mtClass: '4CL6', name: 'NATHANIA OEY' },
+            { formClass: 'P4-I', mtClass: '4CL6', name: 'YANG XIANZHI HOWARD' },
+            { formClass: 'P4-I', mtClass: '4CL6', name: 'TIO WEN LE' },
+            { formClass: 'P4-RS', mtClass: '4CL6', name: 'ALEXANDER LEE YE JUN' },
+            { formClass: 'P4-RS', mtClass: '4CL6', name: 'CHEE YU ZHI' },
+            { formClass: 'P4-RS', mtClass: '4CL6', name: 'CHOI KIAN YONG' },
+            { formClass: 'P4-RS', mtClass: '4CL6', name: 'THONG JIEMING JAVEN' },
+            { formClass: 'P4-O', mtClass: '4CL6', name: 'LEONARDO MAKI DURONIO' }
+        ];
+
+        const App = () => {
+            const [student, setStudent] = useState({ formClass: '', mtClass: '', name: '' });
+            const [scores, setScores] = useState({
+                readingPron: 0, readingFluency: 0,
+                pictureContent: 0, pictureLanguage: 0,
+                convResponse: 0, convLanguage: 0
+            });
+            const [selections, setSelections] = useState({
+                readingPron: null, readingFluency: null,
+                pictureContent: null, pictureLanguage: null,
+                convResponse: null, convLanguage: null
+            });
+            
+            const [feedbackText, setFeedbackText] = useState('');
+            const [lastAutoText, setLastAutoText] = useState('');
+
+            // Updated Google Apps Script Web App URL
+            const gasUrl = 'https://script.google.com/macros/s/AKfycbyhqrXZhmKxDNly6dv8gQwJ_eIEGHQhRb5vpTAA_ypNlAyVRBuHO75f7ssOHbkmq2IS8Q/exec';
+
+            const [submitStatus, setSubmitStatus] = useState('idle');
+            const [currentExaminer, setCurrentExaminer] = useState('');
+            const [dialog, setDialog] = useState({ isOpen: false, title: '', message: '', type: 'alert', onConfirm: null, isSuccess: false });
+
+            // Extract unique Form Classes
+            const formClasses = useMemo(() => {
+                return Array.from(new Set(defaultRoster.map(s => s.formClass))).sort();
+            }, []);
+
+            // Dynamically filter MT Classes based on chosen Form Class
+            const availableMtClasses = useMemo(() => {
+                if (!student.formClass) return [];
+                const filtered = defaultRoster.filter(s => s.formClass === student.formClass);
+                return Array.from(new Set(filtered.map(s => s.mtClass))).sort();
+            }, [student.formClass]);
+
+            // Dynamically filter Students based on chosen Form Class AND MT Class
+            const filteredStudents = useMemo(() => {
+                if (!student.formClass || !student.mtClass) return [];
+                return defaultRoster.filter(s => s.formClass === student.formClass && s.mtClass === student.mtClass);
+            }, [student.formClass, student.mtClass]);
+
+            const readingTotal = Number(scores.readingPron) + Number(scores.readingFluency);
+            const pictureTotal = Number(scores.pictureContent) + Number(scores.pictureLanguage);
+            const convTotal = Number(scores.convResponse) + Number(scores.convLanguage);
+            const grandTotal = readingTotal + pictureTotal + convTotal;
+
+            const generatedReadingFB = useMemo(() => {
+                let fb = [];
+                if (selections.readingPron !== null) fb.push(rubricsData.readingPron.items[selections.readingPron].feedback);
+                if (selections.readingFluency !== null) fb.push(rubricsData.readingFluency.items[selections.readingFluency].feedback);
+                return fb.join(" ");
+            }, [selections]);
+
+            const generatedPictureFB = useMemo(() => {
+                let fb = [];
+                if (selections.pictureContent !== null) fb.push(rubricsData.pictureContent.items[selections.pictureContent].feedback);
+                if (selections.pictureLanguage !== null) fb.push(rubricsData.pictureLanguage.items[selections.pictureLanguage].feedback);
+                return fb.join(" ");
+            }, [selections]);
+
+            const generatedConvFB = useMemo(() => {
+                let fb = [];
+                if (selections.convResponse !== null) fb.push(rubricsData.convResponse.items[selections.convResponse].feedback);
+                if (selections.convLanguage !== null) fb.push(rubricsData.convLanguage.items[selections.convLanguage].feedback);
+                return fb.join(" ");
+            }, [selections]);
+
+            const generatedFeedback = useMemo(() => {
+                let parts = [];
+                if (generatedReadingFB) parts.push(`【朗读短文】\n${generatedReadingFB}`);
+                if (generatedPictureFB) parts.push(`【看图说话】\n${generatedPictureFB}`);
+                if (generatedConvFB) parts.push(`【会话】\n${generatedConvFB}`);
+                return parts.join("\n\n");
+            }, [generatedReadingFB, generatedPictureFB, generatedConvFB]);
+
+            useEffect(() => {
+                setFeedbackText((currentText) => {
+                    if (!currentText || currentText === lastAutoText) {
+                        return generatedFeedback;
+                    }
+                    if (lastAutoText && currentText.includes(lastAutoText)) {
+                        return currentText.replace(lastAutoText, generatedFeedback);
+                    }
+                    return generatedFeedback;
+                });
+                setLastAutoText(generatedFeedback);
+            }, [generatedFeedback]);
+
+            const clearScores = () => {
+                setScores({ readingPron: 0, readingFluency: 0, pictureContent: 0, pictureLanguage: 0, convResponse: 0, convLanguage: 0 });
+                setSelections({ readingPron: null, readingFluency: null, pictureContent: null, pictureLanguage: null, convResponse: null, convLanguage: null });
+                setFeedbackText('');
+            };
+
+            const handleSelect = (category, itemIndex, selectedScore) => {
+                setSelections(prev => ({ ...prev, [category]: itemIndex }));
+                setScores(prev => ({ ...prev, [category]: selectedScore }));
+            };
+
+            const handleScoreChange = (category, value) => {
+                let num = parseInt(value) || 0;
+                if (num > rubricsData[category].max) num = rubricsData[category].max;
+                setScores(prev => ({ ...prev, [category]: num }));
+                setSelections(prev => ({ ...prev, [category]: null })); 
+            };
+
+            const handleExaminerChange = (e) => {
+                const val = e.target.value;
+                setCurrentExaminer(val);
+            };
+
+            const handlePrint = () => {
+                const originalTitle = document.title;
+                const fileName = student.name ? `P4_${student.formClass}_${student.mtClass}_${student.name}_口试反馈` : `P4_口试反馈单`;
+                document.title = fileName;
+                window.print();
+                setTimeout(() => { document.title = originalTitle; }, 500);
+            };
+
+            const handleSubmitGAS = async () => {
+                if (!student.formClass || !student.mtClass || !student.name || !currentExaminer) {
+                    setDialog({ isOpen: true, title: '提示', message: '请确保选择级任班、母语班、考生及主考老师。', type: 'alert' });
+                    return;
+                }
+
+                setSubmitStatus('loading');
+                
+                const payload = {
+                    level: 'P4',
+                    formClass: student.formClass,
+                    className: student.mtClass,
+                    studentName: student.name,
+                    examiner: currentExaminer,
+                    readingScore: readingTotal,
+                    pictureScore: pictureTotal,
+                    convScore: convTotal,
+                    totalScore: grandTotal,
+                    maxTotal: 30,
+                    feedback: feedbackText,
+                    timestamp: new Date().toLocaleString('zh-CN', { hour12: false })
+                };
+
+                try {
+                    await fetch(gasUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    setSubmitStatus('idle');
+                    setDialog({ 
+                        isOpen: true, 
+                        title: '✅ 提交成功！', 
+                        message: `考生 ${student.name} (${student.formClass} / ${student.mtClass}) 的成绩（${grandTotal}/30）已发送至云端，请检查 Google Sheet。`, 
+                        type: 'alert',
+                        isSuccess: true 
+                    });
+                } catch (error) {
+                    setSubmitStatus('idle');
+                    setDialog({ isOpen: true, title: '提交失败', message: '网络连接出现问题，请检查网络或部署网址。', type: 'alert' });
+                }
+            };
+
+            const resetForm = () => {
+                setDialog({
+                    isOpen: true,
+                    title: '确认重置',
+                    message: '确定要清空当前分数和评语，准备给下一位考生打分吗？',
+                    type: 'confirm',
+                    onConfirm: () => {
+                        setStudent(prev => ({ ...prev, name: '' }));
+                        clearScores();
+                    }
+                });
+            };
+
+            const renderRubricRow = (categoryKey) => {
+                const rubricObj = rubricsData[categoryKey];
+                return (
+                    <div className="mb-6 bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-200 no-print">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                            <h3 className="font-bold text-lg md:text-xl text-slate-800">
+                                {rubricObj.title} <span className="text-slate-400 text-base font-medium">({rubricObj.max}分)</span>
+                            </h3>
+                            <div className="flex items-center space-x-3 bg-blue-50 px-4 py-1.5 rounded-xl border border-blue-200 w-full md:w-auto justify-between md:justify-start">
+                                <span className="text-sm md:text-base text-blue-900 font-bold">得分:</span>
+                                <div className="flex items-baseline">
+                                    <input 
+                                        type="number" 
+                                        min="0" max={rubricObj.max}
+                                        value={scores[categoryKey]} 
+                                        onChange={(e) => handleScoreChange(categoryKey, e.target.value)}
+                                        className="w-12 text-center font-black text-2xl text-blue-700 bg-transparent border-b-2 border-blue-300 focus:outline-none focus:border-blue-700 transition-colors"
+                                    />
+                                    <span className="text-slate-500 font-medium ml-1">/{rubricObj.max}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+                            {rubricObj.items.map((item, index) => {
+                                const isSelected = selections[categoryKey] === index;
+                                return (
+                                    <div 
+                                        key={index}
+                                        onClick={() => handleSelect(categoryKey, index, item.score)}
+                                        className={`cursor-pointer rounded-xl p-3 transition-all duration-200 border-2 flex flex-col justify-between ${
+                                            isSelected 
+                                            ? 'border-blue-600 bg-blue-50 shadow-md ring-2 ring-blue-200 scale-[1.01]' 
+                                            : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className={`font-black text-base ${isSelected ? 'text-blue-700' : 'text-slate-800'}`}>
+                                                    {item.label}
+                                                </span>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleSelect(categoryKey, index, item.score);
+                                                    }}
+                                                    className={`w-7 h-7 rounded-lg text-xs font-black transition-all ${
+                                                        isSelected 
+                                                        ? 'bg-blue-600 text-white' 
+                                                        : 'bg-slate-100 text-slate-600 hover:bg-blue-100'
+                                                    }`}
+                                                >
+                                                    {item.score}分
+                                                </button>
+                                            </div>
+                                            <p className={`text-xs leading-relaxed ${isSelected ? 'text-blue-900 font-medium' : 'text-slate-500'}`}>
+                                                {item.desc}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+                    {dialog.isOpen && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm px-4 no-print">
+                            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all border border-slate-200">
+                                <div className={`p-8 ${dialog.isSuccess ? 'bg-green-50 text-center' : ''}`}>
+                                    {dialog.isSuccess && <div className="text-6xl mb-4">🎉</div>}
+                                    <h3 className={`font-black text-2xl mb-2 ${dialog.isSuccess ? 'text-green-800' : 'text-slate-900'}`}>
+                                        {dialog.title || '提示'}
+                                    </h3>
+                                    <p className={`leading-relaxed text-base ${dialog.isSuccess ? 'text-green-900 font-medium' : 'text-slate-600'}`}>
+                                        {dialog.message}
+                                    </p>
+                                </div>
+                                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-center space-x-3">
+                                    {dialog.type === 'confirm' && (
+                                        <button 
+                                            onClick={() => setDialog({ ...dialog, isOpen: false })} 
+                                            className="px-6 py-2.5 text-slate-600 font-bold text-base hover:bg-slate-200 rounded-xl transition-colors w-full"
+                                        >
+                                            取消
+                                        </button>
+                                    )}
+                                    <button 
+                                        onClick={() => { 
+                                            if(dialog.onConfirm) dialog.onConfirm(); 
+                                            setDialog({ ...dialog, isOpen: false, isSuccess: false }); 
+                                        }} 
+                                        className={`px-6 py-2.5 text-white font-black text-base rounded-xl shadow-md transition-colors w-full ${dialog.isSuccess ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                    >
+                                        确定
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TOP NAVIGATION / HEADER BAR */}
+                    <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-xl shadow-md border-b border-slate-200 rounded-2xl p-4 mb-6 flex flex-col no-print gap-4">
+                        
+                        {/* LINE 1: BIG HEADING (MODIFIED AS REQUESTED) */}
+                        <div className="flex items-center justify-between">
+                            <span className="text-3xl font-black text-indigo-700 tracking-tight">
+                                雅德小学四年级华文口试
+                            </span>
+                        </div>
+
+                        {/* LINE 2: DROPDOWNS & SCORES (MATCHING ATTACHED IMAGE FORMAT) */}
+                        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-t border-slate-100 pt-3">
+                            <div className="flex flex-wrap items-center gap-3 text-slate-600 font-bold text-sm">
+                                
+                                {/* 1. 级任班 Dropdown */}
+                                <div className="flex items-center space-x-1.5">
+                                    <span>级任班:</span>
+                                    <select 
+                                        value={student.formClass} 
+                                        onChange={e => setStudent({ formClass: e.target.value, mtClass: '', name: '' })}
+                                        className="border border-slate-200 rounded-2xl px-4 py-2 bg-slate-50/60 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-slate-800 cursor-pointer shadow-sm text-sm"
+                                    >
+                                        <option value="">- 选择 -</option>
+                                        {formClasses.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+
+                                {/* 2. 母语班 Dropdown */}
+                                <div className="flex items-center space-x-1.5">
+                                    <span>母语班:</span>
+                                    <select 
+                                        value={student.mtClass} 
+                                        disabled={!student.formClass}
+                                        onChange={e => setStudent({ ...student, mtClass: e.target.value, name: '' })}
+                                        className="border border-slate-200 rounded-2xl px-4 py-2 bg-slate-50/60 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-slate-800 cursor-pointer shadow-sm text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
+                                    >
+                                        <option value="">- 选择 -</option>
+                                        {availableMtClasses.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                
+                                {/* 3. 考生 Dropdown */}
+                                <div className="flex items-center space-x-1.5">
+                                    <span>考生:</span>
+                                    <select 
+                                        value={student.name} 
+                                        disabled={!student.mtClass}
+                                        onChange={e => setStudent({ ...student, name: e.target.value })}
+                                        className="border border-slate-200 rounded-2xl px-4 py-2 bg-slate-50/60 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none font-bold text-blue-600 cursor-pointer shadow-sm text-sm disabled:bg-slate-100 disabled:cursor-not-allowed min-w-[160px]"
+                                    >
+                                        <option value="">- 选择 -</option>
+                                        {filteredStudents.map((s, i) => <option key={i} value={s.name}>{s.name}</option>)}
+                                    </select>
+                                </div>
+
+                                {/* Vertical Line Divider */}
+                                <div className="h-6 w-[1.5px] bg-slate-200 mx-1 hidden md:block"></div>
+
+                                {/* 4. 主考老师 Dropdown */}
+                                <div className="flex items-center space-x-1.5">
+                                    <span className="text-purple-700 font-bold">主考老师:</span>
+                                    <select 
+                                        value={currentExaminer}
+                                        onChange={handleExaminerChange}
+                                        className="border border-purple-200 rounded-2xl px-4 py-2 bg-purple-50/40 focus:bg-white focus:ring-2 focus:ring-purple-500/20 outline-none font-bold text-purple-900 cursor-pointer shadow-sm text-sm"
+                                    >
+                                        <option value="">- 选择 -</option>
+                                        {examinersList.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* LIVE TOTAL SCORE DISPLAY */}
+                            <div className="flex items-center justify-end space-x-4 w-full xl:w-auto bg-slate-50 xl:bg-transparent p-2 xl:p-0 rounded-xl">
+                                <div className="text-center px-2">
+                                    <div className="text-xs text-slate-500 font-bold">朗读</div>
+                                    <div className="font-black text-lg text-indigo-600">{readingTotal}<span className="text-xs text-slate-400 font-normal">/10</span></div>
+                                </div>
+                                <div className="text-center px-2">
+                                    <div className="text-xs text-slate-500 font-bold">看图</div>
+                                    <div className="font-black text-lg text-indigo-600">{pictureTotal}<span className="text-xs text-slate-400 font-normal">/10</span></div>
+                                </div>
+                                <div className="text-center px-2">
+                                    <div className="text-xs text-slate-500 font-bold">会话</div>
+                                    <div className="font-black text-lg text-indigo-600">{convTotal}<span className="text-xs text-slate-400 font-normal">/10</span></div>
+                                </div>
+                                <div className="text-center px-5 py-1.5 rounded-2xl shadow-md bg-blue-600 text-white">
+                                    <div className="text-xs font-bold opacity-80">总分</div>
+                                    <div className="font-black text-2xl leading-none">{grandTotal}<span className="text-xs font-normal opacity-80 ml-0.5">/30</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {/* PRINT SLIP CONTAINER */}
+                    <div className="print-only print-container">
+                        <div className="text-center mb-6 border-b-2 border-slate-200 pb-4">
+                            {/* DYNAMIC PRINT TITLE & HEADING */}
+                            <h1 className="text-2xl font-black text-slate-900 mb-1 tracking-wide">
+                                🌟 雅德小学四年级华文口试反馈单 🌟
+                            </h1>
+                            <div className="flex justify-center gap-6 text-base text-slate-700 font-medium mt-3">
+                                <span>级任班：<strong className="text-slate-900 font-black">{student.formClass || "未选择"}</strong></span>
+                                <span>母语班：<strong className="text-slate-900 font-black">{student.mtClass || "未选择"}</strong></span>
+                                <span>姓名：<strong className="text-slate-900 font-black">{student.name || "未填写"}</strong></span>
+                                <span>考官：<strong className="text-slate-900 font-black">{currentExaminer || "未选择"}</strong></span>
+                            </div>
+                        </div>
+                        
+                        <div className="flex justify-center items-center gap-3 mb-6">
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 w-28 text-center">
+                                <div className="text-slate-500 font-bold text-xs mb-1">朗读短文</div>
+                                <div className="text-xl font-black text-slate-800">{readingTotal} <span className="text-xs font-normal text-slate-400">/ 10</span></div>
+                            </div>
+                            <div className="text-xl text-slate-300">+</div>
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 w-28 text-center">
+                                <div className="text-slate-500 font-bold text-xs mb-1">看图说话</div>
+                                <div className="text-xl font-black text-slate-800">{pictureTotal} <span className="text-xs font-normal text-slate-400">/ 10</span></div>
+                            </div>
+                            <div className="text-xl text-slate-300">+</div>
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 w-28 text-center">
+                                <div className="text-slate-500 font-bold text-xs mb-1">会话</div>
+                                <div className="text-xl font-black text-slate-800">{convTotal} <span className="text-xs font-normal text-slate-400">/ 10</span></div>
+                            </div>
+                            <div className="text-xl text-slate-300">=</div>
+                            <div className="border-2 bg-blue-50 border-blue-200 rounded-xl p-3 w-32 text-center shadow-sm">
+                                <div className="font-bold text-xs text-blue-700 mb-1">本次总分</div>
+                                <div className="text-3xl font-black text-blue-800">{grandTotal} <span className="text-sm text-blue-500">/ 30</span></div>
+                            </div>
+                        </div>
+
+                        <div className="mb-6">
+                            <h2 className="text-lg font-black text-slate-900 mb-2 flex items-center">
+                                <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center mr-2 text-xs">💡</span> 
+                                老师对你说：
+                            </h2>
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-base text-slate-800 leading-relaxed font-medium whitespace-pre-wrap min-h-[140px]">
+                                {feedbackText || "老师还没有完成评分哦。"}
+                            </div>
+                        </div>
+                        
+                        <div className="text-center mt-8 text-slate-400 font-bold text-base tracking-widest">
+                            继续加油！期待你下一次更精彩的表现！🚀
+                        </div>
+                    </div>
+
+                    {/* MAIN INTERFACE RUBRICS */}
+                    <div className="no-print">
+                        <div className="mb-8">
+                            <h2 className="text-xl font-black text-slate-800 mb-4 px-3 border-l-4 border-blue-600 rounded-sm">
+                                第一部分：朗读短文 (10分)
+                            </h2>
+                            {renderRubricRow('readingPron')}
+                            {renderRubricRow('readingFluency')}
+                        </div>
+
+                        <div className="mb-8">
+                            <h2 className="text-xl font-black text-slate-800 mb-4 px-3 border-l-4 border-emerald-500 rounded-sm">
+                                第二部分：看图说话 (10分)
+                            </h2>
+                            {renderRubricRow('pictureContent')}
+                            {renderRubricRow('pictureLanguage')}
+                        </div>
+
+                        <div className="mb-8">
+                            <h2 className="text-xl font-black text-slate-800 mb-4 px-3 border-l-4 border-indigo-600 rounded-sm">
+                                第三部分：会话 (10分)
+                            </h2>
+                            {renderRubricRow('convResponse')}
+                            {renderRubricRow('convLanguage')}
+                        </div>
+
+                        <div className="mt-8 p-6 rounded-2xl border-2 border-blue-100 bg-blue-50/40 shadow-sm">
+                            <h3 className="font-black text-lg mb-3 text-blue-900 flex items-center justify-between">
+                                <span>📝 自动生成评语预览</span>
+                                <span className="text-xs font-normal text-blue-600 bg-blue-100 px-3 py-1 rounded-full">
+                                    可直接点击文本框随意修改、添加评语
+                                </span>
+                            </h3>
+                            <textarea 
+                                className="w-full h-40 p-4 rounded-xl border-2 border-blue-200 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none resize-none text-slate-800 text-base leading-relaxed bg-white shadow-inner"
+                                value={feedbackText}
+                                onChange={(e) => setFeedbackText(e.target.value)}
+                                placeholder="点击上方表格评分，此处会自动生成评语..."
+                            ></textarea>
+                            
+                            <div className="flex flex-col md:flex-row justify-between items-center mt-6 gap-4">
+                                <button 
+                                    onClick={resetForm} 
+                                    className="flex items-center text-slate-600 bg-white hover:bg-slate-100 border border-slate-300 font-bold text-sm px-5 py-2.5 rounded-xl transition-all shadow-sm"
+                                >
+                                    🔄 清空重置
+                                </button>
+                                
+                                <div className="flex space-x-3 w-full md:w-auto">
+                                    <button 
+                                        onClick={handlePrint}
+                                        className="flex-1 md:flex-none bg-white border-2 border-slate-300 hover:border-slate-400 text-slate-800 px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all"
+                                    >
+                                        🖨️ 打印/保存 PDF
+                                    </button>
+                                    <button 
+                                        onClick={handleSubmitGAS}
+                                        disabled={submitStatus === 'loading'}
+                                        className={`flex-1 md:flex-none text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-md transition-all ${
+                                            submitStatus === 'loading' ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'
+                                        }`}
+                                    >
+                                        {submitStatus === 'loading' ? '☁️ 提交中...' : '☁️ 提交云端表格'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
