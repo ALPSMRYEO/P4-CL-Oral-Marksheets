@@ -337,7 +337,7 @@
             const [lastAutoText, setLastAutoText] = useState('');
 
             // Updated Google Apps Script Web App URL
-            const gasUrl = 'https://script.google.com/macros/s/AKfycbxwOq3DidBOCMcL36v61FvZmdAqlKrLN9Ei2ieMyx72OCAypnYi8oIR5riE6vsGzZJEzw/exec';
+            const gasUrl = 'https://script.google.com/macros/s/AKfycbyhqrXZhmKxDNly6dv8gQwJ_eIEGHQhRb5vpTAA_ypNlAyVRBuHO75f7ssOHbkmq2IS8Q/exec';
 
             const [submitStatus, setSubmitStatus] = useState('idle');
             const [currentExaminer, setCurrentExaminer] = useState('');
@@ -439,17 +439,14 @@
                 setTimeout(() => { document.title = originalTitle; }, 500);
             };
 
-            const handleSubmitGAS = async () => {
-                if (!student.formClass || !student.mtClass || !student.name || !currentExaminer) {
-                    setDialog({ isOpen: true, title: '提示', message: '请确保选择级任班、母语班、考生及主考老师。', type: 'alert' });
-                    return;
-                }
+            const [lastSubmittedKey, setLastSubmittedKey] = useState('');
 
+            const submitAssessment = async () => {
                 setSubmitStatus('loading');
-                
                 const payload = {
                     level: 'P4',
                     formClass: student.formClass,
+                    mtClass: student.mtClass,
                     className: student.mtClass,
                     studentName: student.name,
                     examiner: currentExaminer,
@@ -461,7 +458,6 @@
                     feedback: feedbackText,
                     timestamp: new Date().toLocaleString('zh-CN', { hour12: false })
                 };
-
                 try {
                     await fetch(gasUrl, {
                         method: 'POST',
@@ -469,18 +465,60 @@
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                         body: JSON.stringify(payload)
                     });
-                    
+                    setLastSubmittedKey(`P4|${student.mtClass}|${student.name}`);
                     setSubmitStatus('idle');
-                    setDialog({ 
-                        isOpen: true, 
-                        title: '✅ 提交成功！', 
-                        message: `考生 ${student.name} (${student.formClass} / ${student.mtClass}) 的成绩（${grandTotal}/30）已发送至云端，请检查 Google Sheet。`, 
-                        type: 'alert',
-                        isSuccess: true 
-                    });
+                    setDialog({ isOpen: true, title: '✅ 提交成功！', message: `考生 ${student.name} (${student.formClass} / ${student.mtClass}) 的成绩（${grandTotal}/30）已发送至云端，请检查 Google Sheet。`, type: 'alert', isSuccess: true });
                 } catch (error) {
                     setSubmitStatus('idle');
                     setDialog({ isOpen: true, title: '提交失败', message: '网络连接出现问题，请检查网络或部署网址。', type: 'alert' });
+                }
+            };
+
+            const showDuplicateWarning = (details = '') => {
+                setSubmitStatus('idle');
+                setDialog({
+                    isOpen: true,
+                    title: '⚠️ 成绩已提交',
+                    message: `这名考生的成绩已经提交过。${details ? '\n' + details : ''}\n\n请选择“取消”停止提交，或“继续提交”再次提交成绩。`,
+                    type: 'confirm',
+                    confirmText: '继续提交',
+                    cancelText: '取消',
+                    onConfirm: submitAssessment
+                });
+            };
+
+            const handleSubmitGAS = async () => {
+                if (!student.formClass || !student.mtClass || !student.name || !currentExaminer) {
+                    setDialog({ isOpen: true, title: '提示', message: '请确保选择级任班、母语班、考生及主考老师。', type: 'alert' });
+                    return;
+                }
+
+                const submissionKey = `P4|${student.mtClass}|${student.name}`;
+                if (lastSubmittedKey === submissionKey) {
+                    showDuplicateWarning(`本页面刚刚已为 ${student.name} 提交过一次。`);
+                    return;
+                }
+
+                setSubmitStatus('loading');
+                try {
+                    const checkUrl = `${gasUrl}?action=check&level=${encodeURIComponent('P4')}&mtClass=${encodeURIComponent(student.mtClass)}&studentName=${encodeURIComponent(student.name)}&_=${Date.now()}`;
+                    const response = await fetch(checkUrl, { method: 'GET', cache: 'no-store' });
+                    const result = await response.json();
+                    if (result && result.exists) {
+                        const prev = result.previous || {};
+                        const info = `上一次主考老师：${prev.examiner || '未记录'}；提交时间：${prev.timestamp || '未记录'}。`;
+                        showDuplicateWarning(info);
+                        return;
+                    }
+                    await submitAssessment();
+                } catch (error) {
+                    setSubmitStatus('idle');
+                    setDialog({
+                        isOpen: true,
+                        title: '无法检查重复记录',
+                        message: '系统暂时无法确认这名考生是否已经提交过成绩。为避免重复提交，请稍后再试。',
+                        type: 'alert'
+                    });
                 }
             };
 
@@ -583,7 +621,7 @@
                                             onClick={() => setDialog({ ...dialog, isOpen: false })} 
                                             className="px-6 py-2.5 text-slate-600 font-bold text-base hover:bg-slate-200 rounded-xl transition-colors w-full"
                                         >
-                                            取消
+                                            {dialog.cancelText || '取消'}
                                         </button>
                                     )}
                                     <button 
@@ -593,7 +631,7 @@
                                         }} 
                                         className={`px-6 py-2.5 text-white font-black text-base rounded-xl shadow-md transition-colors w-full ${dialog.isSuccess ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
                                     >
-                                        确定
+                                        {dialog.confirmText || '确定'}
                                     </button>
                                 </div>
                             </div>
