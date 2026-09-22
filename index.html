@@ -487,6 +487,56 @@
                 });
             };
 
+            // Duplicate check with automatic retry. This reduces false warnings caused by
+            // brief Wi-Fi / Apps Script delays during the oral examination.
+            const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+            const checkDuplicateWithRetry = async (maxAttempts = 3) => {
+                let lastError = null;
+
+                for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+                    try {
+                        const checkUrl = `${gasUrl}?action=check&level=${encodeURIComponent('P4')}&mtClass=${encodeURIComponent(student.mtClass)}&studentName=${encodeURIComponent(student.name)}&_=${Date.now()}`;
+                        const response = await fetch(checkUrl, {
+                            method: 'GET',
+                            cache: 'no-store',
+                            signal: controller.signal
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`Duplicate check returned HTTP ${response.status}`);
+                        }
+
+                        const text = await response.text();
+                        let result;
+                        try {
+                            result = JSON.parse(text);
+                        } catch (e) {
+                            throw new Error('Duplicate check returned an invalid response');
+                        }
+
+                        if (!result || result.ok === false) {
+                            throw new Error((result && result.error) || 'Duplicate check failed');
+                        }
+
+                        clearTimeout(timeoutId);
+                        return result;
+                    } catch (error) {
+                        clearTimeout(timeoutId);
+                        lastError = error;
+                        if (attempt < maxAttempts) {
+                            // Small increasing delay before retrying: 0.8s, then 1.6s.
+                            await sleep(800 * attempt);
+                        }
+                    }
+                }
+
+                throw lastError || new Error('Duplicate check failed');
+            };
+
             const handleSubmitGAS = async () => {
                 if (!student.formClass || !student.mtClass || !student.name || !currentExaminer) {
                     setDialog({ isOpen: true, title: '提示', message: '请确保选择级任班、母语班、考生及主考老师。', type: 'alert' });
@@ -501,9 +551,7 @@
 
                 setSubmitStatus('loading');
                 try {
-                    const checkUrl = `${gasUrl}?action=check&level=${encodeURIComponent('P4')}&mtClass=${encodeURIComponent(student.mtClass)}&studentName=${encodeURIComponent(student.name)}&_=${Date.now()}`;
-                    const response = await fetch(checkUrl, { method: 'GET', cache: 'no-store' });
-                    const result = await response.json();
+                    const result = await checkDuplicateWithRetry(3);
                     if (result && result.exists) {
                         const prev = result.previous || {};
                         const info = `上一次主考老师：${prev.examiner || '未记录'}；提交时间：${prev.timestamp || '未记录'}。`;
@@ -515,8 +563,8 @@
                     setSubmitStatus('idle');
                     setDialog({
                         isOpen: true,
-                        title: '无法检查重复记录',
-                        message: '系统暂时无法确认这名考生是否已经提交过成绩。为避免重复提交，请稍后再试。',
+                        title: '暂时无法连接成绩系统',
+                        message: '系统已自动重试 3 次，但仍无法完成重复记录检查。为避免重复提交，请检查网络后再按“提交成绩”。已输入的分数和评语不会被清除。',
                         type: 'alert'
                     });
                 }
