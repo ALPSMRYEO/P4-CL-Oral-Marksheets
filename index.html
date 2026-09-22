@@ -441,7 +441,7 @@
 
             const [lastSubmittedKey, setLastSubmittedKey] = useState('');
 
-            const submitAssessment = async () => {
+            const submitAssessment = async (forceDuplicate = false) => {
                 setSubmitStatus('loading');
                 const payload = {
                     level: 'P4',
@@ -456,7 +456,8 @@
                     totalScore: grandTotal,
                     maxTotal: 30,
                     feedback: feedbackText,
-                    timestamp: new Date().toLocaleString('zh-CN', { hour12: false })
+                    timestamp: new Date().toLocaleString('zh-CN', { hour12: false }),
+                    forceDuplicate: forceDuplicate
                 };
                 try {
                     await fetch(gasUrl, {
@@ -483,7 +484,7 @@
                     type: 'confirm',
                     confirmText: '继续提交',
                     cancelText: '取消',
-                    onConfirm: submitAssessment
+                    onConfirm: () => submitAssessment(true)
                 });
             };
 
@@ -550,23 +551,28 @@
                 }
 
                 setSubmitStatus('loading');
+
                 try {
-                    const result = await checkDuplicateWithRetry(3);
+                    // The browser check is useful for showing the examiner an immediate
+                    // warning, but it is no longer allowed to stop the examination if
+                    // Wi-Fi / Apps Script temporarily prevents the check from completing.
+                    const result = await checkDuplicateWithRetry(2);
+
                     if (result && result.exists) {
                         const prev = result.previous || {};
                         const info = `上一次主考老师：${prev.examiner || '未记录'}；提交时间：${prev.timestamp || '未记录'}。`;
                         showDuplicateWarning(info);
                         return;
                     }
-                    await submitAssessment();
+
+                    await submitAssessment(false);
+
                 } catch (error) {
-                    setSubmitStatus('idle');
-                    setDialog({
-                        isOpen: true,
-                        title: '暂时无法连接成绩系统',
-                        message: '系统已自动重试 3 次，但仍无法完成重复记录检查。为避免重复提交，请检查网络后再按“提交成绩”。已输入的分数和评语不会被清除。',
-                        type: 'alert'
-                    });
+                    // IMPORTANT: do not show “无法检查重复记录”.
+                    // Code.gs now performs the final duplicate check under a script lock.
+                    // We can therefore send the submission safely even if this preliminary
+                    // browser check is temporarily unavailable.
+                    await submitAssessment(false);
                 }
             };
 
