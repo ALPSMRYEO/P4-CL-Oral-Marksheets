@@ -13,7 +13,9 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <style>
+        @page { size: auto; margin: 0; }
         @media print {
+            html, body { margin: 0 !important; padding: 0 !important; }
             body { background-color: white; font-size: 14pt; }
             .no-print { display: none !important; }
             .print-only { display: block !important; }
@@ -137,190 +139,15 @@
             'Su Wan Ju', 'Tan Hui Juai', 'Tey Siew Leng', 'Yeo Wee Kiang', 'Zheng Lidan'
         ];
 
-        const defaultRoster = [
-            // 4CL1
-            { formClass: 'P4-E', mtClass: '4CL1', name: 'CHEONG KE YANG' },
-            { formClass: 'P4-E', mtClass: '4CL1', name: 'JAYLEN CHNG JUN XIONG' },
-            { formClass: 'P4-E', mtClass: '4CL1', name: 'LEE HAO RUI RAYDER' },
-            { formClass: 'P4-E', mtClass: '4CL1', name: 'ONG JUN KAI, JAYEN' },
-            { formClass: 'P4-E', mtClass: '4CL1', name: 'SOH YU FAN, BRAYDEN' },
-            { formClass: 'P4-E', mtClass: '4CL1', name: 'TREATIC HO' },
-            { formClass: 'P4-H', mtClass: '4CL1', name: 'CHIAM HAN XIANG LUCAS' },
-            { formClass: 'P4-H', mtClass: '4CL1', name: 'CHUA SIANG U ZACHARY' },
-            { formClass: 'P4-H', mtClass: '4CL1', name: 'DEBBIE ANG YU MAN' },
-            { formClass: 'P4-H', mtClass: '4CL1', name: 'GABRIEL TAN' },
-            { formClass: 'P4-H', mtClass: '4CL1', name: 'JAYDEN ONG YOU WEN' },
-            { formClass: 'P4-H', mtClass: '4CL1', name: 'KELLY CHANG KAI LI' },
-            { formClass: 'P4-H', mtClass: '4CL1', name: 'LAU KA HUNG' },
-            { formClass: 'P4-I', mtClass: '4CL1', name: 'DARSHAN RAJAN NARWANI' },
-            { formClass: 'P4-RS', mtClass: '4CL1', name: 'ELYSSA CHOE SHI EN' },
-            { formClass: 'P4-RS', mtClass: '4CL1', name: 'TAN BO HAN, HAROLD' },
-            { formClass: 'P4-RS', mtClass: '4CL1', name: 'VENETIA WONG JING QI' },
-            { formClass: 'P4-RS', mtClass: '4CL1', name: 'WEE YIN REN MARC' },
-            { formClass: 'P4-RS', mtClass: '4CL1', name: 'WOO JIA JUN COBY' },
-
-            // 4CL2
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'CATHERINE MARIE HARYANTO' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'CHEONG MING FENG AUGUSTINE' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'CHLOE LIM JIAYI' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'DAYNA HENG ZI YAN' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'KIARA MABELLE SUHARDJO' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'KIM RA ON' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'KIU CHEN LING KAYLA' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'LIM JUN HUI' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'LIN HSIAN YEE LOIS' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'LOUIS JIA-LE CROGUENNEC' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'OLIVIA TEO' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'ONG REI XIANG' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'RAPHAEL PANG TIAN LE' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'REHAN ANTONIN DVORAK-GHOSH' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'SIM YU QI' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'TAI QI YING, AVELYN' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'TOO JIA WEN JESLYN' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'WOO HEI MAN RENEE' },
-            { formClass: 'P4-E', mtClass: '4CL2', name: 'YANG ZIXUAN' },
-            { formClass: 'P4-H', mtClass: '4CL2', name: 'HAN QIAOXIN ELIZA' },
-            { formClass: 'P4-H', mtClass: '4CL2', name: 'KOH TIANJUN HUGO' },
-            { formClass: 'P4-H', mtClass: '4CL2', name: 'NATASHA GAN ZI QI' },
-            { formClass: 'P4-H', mtClass: '4CL2', name: 'SOH E XIN KRISTAN' },
-            { formClass: 'P4-H', mtClass: '4CL2', name: 'TAI XUAN YING, ALINA' },
-            { formClass: 'P4-I', mtClass: '4CL2', name: 'CHAN WAN-ENG AMABELLE' },
-            { formClass: 'P4-I', mtClass: '4CL2', name: 'HUANG JINGXI' },
-            { formClass: 'P4-I', mtClass: '4CL2', name: 'KOONG JIE LE CONOR' },
-            { formClass: 'P4-I', mtClass: '4CL2', name: 'LEONG YIN KWAN' },
-            { formClass: 'P4-I', mtClass: '4CL2', name: 'LIM JINGJIE' },
-            { formClass: 'P4-I', mtClass: '4CL2', name: 'LIM KAI EN ASHER' },
-            { formClass: 'P4-I', mtClass: '4CL2', name: 'LOH SHI NING, CHLOE' },
-            { formClass: 'P4-I', mtClass: '4CL2', name: 'OH YU CHEN, TAVIS' },
-            { formClass: 'P4-I', mtClass: '4CL2', name: 'EUEN TOH KIT CHUNG (DU JIECONG)' },
-
-            // 4CL3
-            { formClass: 'P4-E', mtClass: '4CL3', name: 'INES YING HUI JOHNSON' },
-            { formClass: 'P4-E', mtClass: '4CL3', name: 'LEE JIA YI' },
-            { formClass: 'P4-E', mtClass: '4CL3', name: 'LIM LI YA' },
-            { formClass: 'P4-E', mtClass: '4CL3', name: 'MATTHIAS TAN JING RUI' },
-            { formClass: 'P4-E', mtClass: '4CL3', name: 'SUN CHENGYANG' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'AILSIE CHIN EN QI' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'ALEC AI SHUFAN' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'ANG YI XUAN AYLIN' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'ANNAMARIA LIN XIYA' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'CHEN SIYU' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'CHOH ZI YANG RYAN' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'EMMA TEW YING QING' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'JAYDEN LEE ZHI HONG' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'JESSE ZHANG JUNHAN' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'KAYLENE SOO LING JIN' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'KIEW DIAN ZHENG, ASHER' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'KOH KAI JUN RAYLEIGH' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'LEIA MIKAELA LOKE' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'LIM SI MIN CADENCE' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'NAOMI LIM XIN XI' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'NATHAN LIM ZI AN' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'NG JUN CHANG GARRETT' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'NG ROU EN, ERICIA' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'OLIVIA XINYU WADE' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'REEYA PRABHURAM' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'TAN HONG RUI' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'WONG ZI XUAN' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'YONG ETHAN' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'ZELENE HO' },
-            { formClass: 'P4-O', mtClass: '4CL3', name: 'ZHUANG MOYE' },
-            { formClass: 'P4-RS', mtClass: '4CL3', name: 'CHAN WAI SHUEN' },
-            { formClass: 'P4-RS', mtClass: '4CL3', name: 'CHUA MING JOON, OWEN' },
-            { formClass: 'P4-RS', mtClass: '4CL3', name: 'CODY SIM JUNPENG' },
-            { formClass: 'P4-RS', mtClass: '4CL3', name: 'LIM JING YING' },
-            { formClass: 'P4-RS', mtClass: '4CL3', name: 'LUTHER GOH ZHENG XUAN' },
-            { formClass: 'P4-RS', mtClass: '4CL3', name: 'TAN SZE LING SCARLETT' },
-            { formClass: 'P4-RS', mtClass: '4CL3', name: 'YU MING FENG EVAN' },
-            { formClass: 'P4-E', mtClass: '4CL3', name: 'YI ZHILIN' },
-            { formClass: 'P4-RS', mtClass: '4CL3', name: 'HUANG CHENGXI' },
-
-            // 4CL4
-            { formClass: 'P4-H', mtClass: '4CL4', name: 'ANG XUAN KID' },
-            { formClass: 'P4-H', mtClass: '4CL4', name: 'ISABELLE POON XUE ER' },
-            { formClass: 'P4-H', mtClass: '4CL4', name: 'KARA BETH LAI' },
-            { formClass: 'P4-I', mtClass: '4CL4', name: 'WANG YOUYI' },
-            { formClass: 'P4-O', mtClass: '4CL4', name: 'CHANG HAO YU, GASPAR' },
-            { formClass: 'P4-O', mtClass: '4CL4', name: 'CHARLES YE YANRAN' },
-            { formClass: 'P4-O', mtClass: '4CL4', name: 'DARIUS CHUA KAI FENG' },
-            { formClass: 'P4-O', mtClass: '4CL4', name: 'DEON SANTOSO' },
-            { formClass: 'P4-O', mtClass: '4CL4', name: 'ELYSSA THEA LUHUR' },
-            { formClass: 'P4-O', mtClass: '4CL4', name: 'IAN LIM JUN XIAN' },
-            { formClass: 'P4-O', mtClass: '4CL4', name: 'JANELLE CHAN' },
-            { formClass: 'P4-O', mtClass: '4CL4', name: 'JEREMIAH TAN KAI LE' },
-            { formClass: 'P4-O', mtClass: '4CL4', name: 'KAI LINDEMANN' },
-            { formClass: 'P4-O', mtClass: '4CL4', name: 'KOH EN YI ALEXA' },
-            { formClass: 'P4-O', mtClass: '4CL4', name: 'LEONG KAI HONG, ETHAN' },
-            { formClass: 'P4-O', mtClass: '4CL4', name: 'MEGAN LIM JING XUAN' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'ADEN TAN KAI ZE' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'CHIA XIN TONG JASLYN' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'HOW ELIN' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'JOHANN TANG YI XIAN' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'JUNIUS-JAY LOH YI RUI' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'LIM JIA LE, SHAUN' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'LIM ZI QIN' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'RAE LYNN KHOO' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'SOFIA WEASLEY' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'SU SHIYA' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'TAN JIA XUAN' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'TAN LE XUAN, ALYSSA' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'THAM JIE YI, KYAN' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'WONG QI YANG' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'WONG SHI HAN, CHLOE' },
-            { formClass: 'P4-RS', mtClass: '4CL4', name: 'YEO ZONG XUN' },
-
-            // 4CL5
-            { formClass: 'P4-H', mtClass: '4CL5', name: 'ANG JUN RONG' },
-            { formClass: 'P4-H', mtClass: '4CL5', name: 'ANNA LEE SI EN' },
-            { formClass: 'P4-H', mtClass: '4CL5', name: 'HO ZUNG HOI, THADDEUS' },
-            { formClass: 'P4-H', mtClass: '4CL5', name: 'LEE XIN TING CELINE' },
-            { formClass: 'P4-H', mtClass: '4CL5', name: 'LEW SHAN MIN' },
-            { formClass: 'P4-H', mtClass: '4CL5', name: 'NAOMI KAN WEI EN' },
-            { formClass: 'P4-H', mtClass: '4CL5', name: 'NEO HWEE ZEN' },
-            { formClass: 'P4-H', mtClass: '4CL5', name: 'OLIVER LOH HONG KAI' },
-            { formClass: 'P4-H', mtClass: '4CL5', name: 'SZE YI HAN' },
-            { formClass: 'P4-H', mtClass: '4CL5', name: 'TING YU AN CAEDMON' },
-            { formClass: 'P4-H', mtClass: '4CL5', name: 'YUE KAIQI' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'ALEX CHUA YI FENG' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'ARIELLA ARIFIN' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'CHIU JING YU KODY' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'CHUA JIA YING OLIVIA' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'ENYEA TEO EN RUI' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'HONG ZI XUAN, ELLIE' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'KWAN YU EN EMMA' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'LAU JIE KAI' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'LEE HOU MING' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'LEIA TAM TZE MIN' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'LOW YI LE ETHAN' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'NG JIN RUI DARIUS' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'OW KAI XUAN, ANDREA' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'PHANG ZI RUI' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'SEE YI LING' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'TAN JIA HUAN LYDIA' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'TAN YU XI MATILDA' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'TER JOO EE' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'TONG PEI YI CLARE' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'WONG MIN EN, MIKAYLA' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'YEO YU KAI ALDRICH' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'YEW YU HAN CHARLOTTE' },
-            { formClass: 'P4-I', mtClass: '4CL5', name: 'CHEN XINRAN' },
-            { formClass: 'P4-H', mtClass: '4CL5', name: 'HUANG YIYANG' },
-            { formClass: 'P4-H', mtClass: '4CL5', name: 'SU RUINING' },
-
-            // 4CL6
-            { formClass: 'P4-E', mtClass: '4CL6', name: 'ALOYSIUS ONG KAI SHENG' },
-            { formClass: 'P4-E', mtClass: '4CL6', name: 'NICOLAS LIM YUAN HE' },
-            { formClass: 'P4-H', mtClass: '4CL6', name: 'SIENNA WEE SHI EN' },
-            { formClass: 'P4-I', mtClass: '4CL6', name: 'NATHANIA OEY' },
-            { formClass: 'P4-I', mtClass: '4CL6', name: 'YANG XIANZHI HOWARD' },
-            { formClass: 'P4-I', mtClass: '4CL6', name: 'TIO WEN LE' },
-            { formClass: 'P4-RS', mtClass: '4CL6', name: 'ALEXANDER LEE YE JUN' },
-            { formClass: 'P4-RS', mtClass: '4CL6', name: 'CHEE YU ZHI' },
-            { formClass: 'P4-RS', mtClass: '4CL6', name: 'CHOI KIAN YONG' },
-            { formClass: 'P4-RS', mtClass: '4CL6', name: 'THONG JIEMING JAVEN' },
-        ];
+        const defaultRoster = []; // Student roster is loaded only after successful login.
 
         const App = () => {
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [accessPassword, setAccessPassword] = useState('');
+            const [authStatus, setAuthStatus] = useState('idle');
+            const [roster, setRoster] = useState([]);
+            const [authToken, setAuthToken] = useState(() => sessionStorage.getItem('p4AuthToken') || '');
+
             const [student, setStudent] = useState({ formClass: '', mtClass: '', name: '' });
             const [scores, setScores] = useState({
                 readingPron: 0, readingFluency: 0,
@@ -339,26 +166,67 @@
             // Updated Google Apps Script Web App URL
             const gasUrl = 'https://script.google.com/macros/s/AKfycbyhqrXZhmKxDNly6dv8gQwJ_eIEGHQhRb5vpTAA_ypNlAyVRBuHO75f7ssOHbkmq2IS8Q/exec';
 
+            const loadRoster = async (token) => {
+                const url = `${gasUrl}?action=roster&token=${encodeURIComponent(token)}&_=${Date.now()}`;
+                const response = await fetch(url, { cache: 'no-store' });
+                const data = await response.json();
+                if (!data.ok || !Array.isArray(data.roster)) throw new Error('Unauthorised');
+                setRoster(data.roster);
+                setIsAuthenticated(true);
+            };
+
+            const handleLogin = async (e) => {
+                if (e) e.preventDefault();
+                if (!accessPassword) return;
+                setAuthStatus('loading');
+                try {
+                    const url = `${gasUrl}?action=login&password=${encodeURIComponent(accessPassword)}&_=${Date.now()}`;
+                    const response = await fetch(url, { cache: 'no-store' });
+                    const data = await response.json();
+                    if (!data.ok || !data.token) throw new Error('Incorrect password');
+                    sessionStorage.setItem('p4AuthToken', data.token);
+                    setAuthToken(data.token);
+                    setAccessPassword('');
+                    await loadRoster(data.token);
+                    setAuthStatus('idle');
+                } catch (err) {
+                    sessionStorage.removeItem('p4AuthToken');
+                    setAuthToken('');
+                    setIsAuthenticated(false);
+                    setAuthStatus('error');
+                }
+            };
+
+            useEffect(() => {
+                if (!authToken) return;
+                loadRoster(authToken).catch(() => {
+                    sessionStorage.removeItem('p4AuthToken');
+                    setAuthToken('');
+                    setIsAuthenticated(false);
+                });
+            }, []);
+
+
             const [submitStatus, setSubmitStatus] = useState('idle');
             const [currentExaminer, setCurrentExaminer] = useState('');
             const [dialog, setDialog] = useState({ isOpen: false, title: '', message: '', type: 'alert', onConfirm: null, isSuccess: false });
 
             // Extract unique Form Classes
             const formClasses = useMemo(() => {
-                return Array.from(new Set(defaultRoster.map(s => s.formClass))).sort();
-            }, []);
+                return Array.from(new Set(roster.map(s => s.formClass))).sort();
+            }, [roster]);
 
             // Dynamically filter MT Classes based on chosen Form Class
             const availableMtClasses = useMemo(() => {
                 if (!student.formClass) return [];
-                const filtered = defaultRoster.filter(s => s.formClass === student.formClass);
+                const filtered = roster.filter(s => s.formClass === student.formClass);
                 return Array.from(new Set(filtered.map(s => s.mtClass))).sort();
             }, [student.formClass]);
 
             // Dynamically filter Students based on chosen Form Class AND MT Class
             const filteredStudents = useMemo(() => {
                 if (!student.formClass || !student.mtClass) return [];
-                return defaultRoster.filter(s => s.formClass === student.formClass && s.mtClass === student.mtClass);
+                return roster.filter(s => s.formClass === student.formClass && s.mtClass === student.mtClass);
             }, [student.formClass, student.mtClass]);
 
             const readingTotal = Number(scores.readingPron) + Number(scores.readingFluency);
@@ -463,7 +331,8 @@
                     maxTotal: 30,
                     feedback: feedbackText,
                     timestamp: new Date().toLocaleString('zh-CN', { hour12: false }),
-                    forceDuplicate: forceDuplicate
+                    forceDuplicate: forceDuplicate,
+                    token: authToken
                 };
                 try {
                     await fetch(gasUrl, {
@@ -506,7 +375,7 @@
                     const timeoutId = setTimeout(() => controller.abort(), 8000);
 
                     try {
-                        const checkUrl = `${gasUrl}?action=check&level=${encodeURIComponent('P4')}&mtClass=${encodeURIComponent(student.mtClass)}&studentName=${encodeURIComponent(student.name)}&_=${Date.now()}`;
+                        const checkUrl = `${gasUrl}?action=check&level=${encodeURIComponent('P4')}&mtClass=${encodeURIComponent(student.mtClass)}&studentName=${encodeURIComponent(student.name)}&token=${encodeURIComponent(authToken)}&_=${Date.now()}`;
                         const response = await fetch(checkUrl, {
                             method: 'GET',
                             cache: 'no-store',
@@ -660,6 +529,20 @@
                     </div>
                 );
             };
+
+            if (!isAuthenticated) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+                        <form onSubmit={handleLogin} className="w-full max-w-md bg-white border border-slate-200 shadow-xl rounded-3xl p-8">
+                            <div className="text-center mb-7"><div className="text-5xl mb-3">🔒</div><h1 className="text-2xl font-black text-indigo-700">雅德小学四年级华文口试</h1><p className="text-slate-500 mt-2">请输入授权密码进入评分系统</p></div>
+                            <input type="password" value={accessPassword} onChange={e => { setAccessPassword(e.target.value); setAuthStatus('idle'); }} placeholder="密码" autoFocus className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-lg outline-none focus:border-indigo-500" />
+                            {authStatus === 'error' && <p className="text-red-600 text-sm font-bold mt-3">密码不正确，请重试。</p>}
+                            <button type="submit" disabled={authStatus === 'loading'} className="w-full mt-5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-black py-3 rounded-xl shadow-md">{authStatus === 'loading' ? '验证中...' : '进入系统'}</button>
+                            <p className="text-xs text-slate-400 text-center mt-5">仅供授权人员使用</p>
+                        </form>
+                    </div>
+                );
+            }
 
             return (
                 <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
